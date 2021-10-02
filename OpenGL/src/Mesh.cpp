@@ -4,9 +4,60 @@
 #include <sstream>
 #include <vector>
 
-Mesh Mesh::Cube()
+//#define DEBUG_MESH
+
+glm::vec3 stoVec3(std::vector<std::string>& vec, int start = 0)
 {
-	return LoadMesh("res/meshes/Cube.obj");
+	glm::vec3 result = glm::vec3();
+
+	for (int i = start; i < vec.size() && i < start + 3; i++)
+	{
+		result[i - start] = std::stof(vec[i]);
+	}
+
+	return result;
+}
+
+void printVec3(glm::vec3& vec)
+{
+	std::cout << "(" << vec.x << ", " << vec.y << ", " << vec.z << ")";
+}
+
+void printVec2(glm::vec2& vec)
+{
+	std::cout << "(" << vec.x << ", " << vec.y << ")";
+}
+
+void Mesh::print(std::string name = "Mesh")
+{
+	std::cout << "---------- " << name << " START ----------" << std::endl;
+
+	for (int i = 0; i < positions.size(); i++)
+	{
+		std::cout << "v" << i << ":" << std::endl;
+
+		std::cout << "\tp: ";
+		printVec3(positions[i]);
+		std::cout << std::endl;
+
+		std::cout << "\tn: ";
+		printVec3(normals[i]);
+		std::cout << std::endl;
+
+		std::cout << "\ttc: ";
+		printVec2(texCoords[i]);
+		std::cout << std::endl;
+
+		std::cout << std::endl;
+	}
+
+	for (int i = 0; i < triangles.size() - 2; i += 3)
+	{
+		std::cout << "t" << i / 3 << ": " << triangles[i] << " " 
+			<< triangles[i + 1] << " " << triangles[i + 2] << std::endl;
+	}
+
+	std::cout << "---------- " << name << " END ----------" << std::endl;
 }
 
 std::vector<std::string> tokenize(std::string s, std::string del = " ") {
@@ -26,21 +77,26 @@ std::vector<std::string> tokenize(std::string s, std::string del = " ") {
 	return tokens;
 }
 
-glm::vec3 stoVec3(std::vector<std::string>& vec, int start = 0)
+Mesh Mesh::Cube()
 {
-	glm::vec3 result = glm::vec3();
-	
-	for (int i = start; i < vec.size() && i < start + 3; i++)
-	{
-		result[i - start] = std::stof(vec[i]);
-	}
-
-	return result;
+#ifndef DEBUG_MESH
+	return LoadMesh("res/meshes/Cube.obj");
+#else
+	Mesh cubeMesh = LoadMesh("res/meshes/Cube.obj");
+	cubeMesh.print("Cube");
+	return cubeMesh;
+#endif
 }
 
-void printVec3(glm::vec3& vec)
+Mesh Mesh::Plane()
 {
-	std::cout << "(" << vec.x << ", " << vec.y << ", " << vec.z << ")\n";
+#ifndef DEBUG_MESH
+	return LoadMesh("res/meshes/Plane.obj");
+#else
+	Mesh cubeMesh = LoadMesh("res/meshes/Plane.obj");
+	cubeMesh.print("Plane");
+	return cubeMesh;
+#endif
 }
 
 Mesh Mesh::LoadMesh(const std::string& filepath)
@@ -78,7 +134,7 @@ Mesh Mesh::LoadMesh(const std::string& filepath)
 
 			for (int i = 1; i < tokens.size(); i++) 
 			{
-				std::vector<std::string> indicies = tokenize(tokens[1], "/");
+				std::vector<std::string> indicies = tokenize(tokens[i], "/");
 
 				int p = stoi(indicies[0]) - 1;
 				int n = stoi(indicies[2]) - 1;

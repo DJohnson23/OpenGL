@@ -9,9 +9,12 @@ public:
 	std::vector<glm::vec3> positions;
 	std::vector<glm::vec2> texCoords;
 	std::vector<glm::vec3> normals;
-	std::vector<int> triangles;
+	std::vector<unsigned int> triangles;
+
+	void print(std::string);
 
 	static Mesh Cube();
+	static Mesh Plane();
 	static Mesh LoadMesh(const std::string& filepath);
 
 };

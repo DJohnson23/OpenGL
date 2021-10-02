@@ -52,49 +52,19 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-    Mesh cubeMesh = Mesh::Cube();
-
     {
-        float positions[] = {
-            //Position           tex_coord   normal
-            //Front
-             -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 0
-              0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 1
-              0.5f,  0.5f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, // 2
-             -0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // 3
-
-             //Top
-             -0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 4
-              0.5f,  0.5f,-0.5f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 5
-             -0.5f,  0.5f,-0.5f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 6
-              0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 7
-
-        };
-
-        unsigned int indices[] = {
-            0, 1, 2,
-            2, 3, 0,
-
-            4, 5, 6,
-            4, 7, 5
-        };
+        Mesh cubeMesh = Mesh::Cube();
+        Mesh planeMesh = Mesh::Plane();
+        //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
+        
 
         GLCall(glEnable(GL_BLEND));
         GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        GLCall(glEnable(GL_DEPTH_TEST));
+        GLCall(glDepthFunc(GL_LESS));
+        
 
-        VertexArray va;
-        VertexBuffer vb(positions, 8 * 8 * sizeof(float));
-
-        VertexBufferLayout layout;
-        layout.Push<float>(3);
-        layout.Push<float>(2);
-        layout.Push<float>(3);
-        va.AddBuffer(vb, layout);
-
-        // Index Buffer object
-        IndexBuffer ib(indices, 12);
-
-        glm::vec3 camPos = glm::vec3(0, 1, 3);
+        glm::vec3 camPos = glm::vec3(2, 1, 3);
 
         glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
         //glm::mat4 proj = glm::perspective<float>(60.0f, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 150.0f);
@@ -116,10 +86,7 @@ int main(void)
         Texture texture("res/textures/Apple.png");
         texture.Bind();
         shader.SetUniform1i("u_Texture", 0);
-
-        va.Unbind();
-        vb.Unbind();
-        ib.Unbind();
+        
         shader.Unbind();
 
         Renderer renderer;
@@ -135,7 +102,9 @@ int main(void)
             shader.Bind();
             shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
 
-            renderer.Draw(va, ib, shader);
+            //renderer.Draw(planeMesh, shader);
+            renderer.Draw(cubeMesh, shader);
+            //renderer.Draw(dollMesh, shader);
 
             if (r > 1.0f)
                 increment = -0.05f;
