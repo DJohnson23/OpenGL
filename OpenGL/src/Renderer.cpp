@@ -1,5 +1,7 @@
 #include "Renderer.h"
 #include "VertexBufferLayout.h"
+#include "GLFW/glfw3.h"
+#include "glm/gtc/matrix_transform.hpp"
 
 #include <iostream>
 
@@ -17,6 +19,48 @@ bool GLLogCall(const char* function, const char* file, int line)
     }
 
     return true;
+}
+
+void Renderer::StereoscopicDraw(const Mesh& m, Shader& shader, const Camera cam, float ipd) const
+{
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    float halfIpd = ipd / 2;
+
+    glm::vec3 forward = cam.camTarget - cam.camPos;
+    glm::vec3 right = glm::normalize(glm::cross(forward, cam.upVector));
+
+    glm::vec3 camTransform = right * halfIpd;
+
+    glm::mat4 view = glm::lookAt(
+        cam.camPos - camTransform, // Camera is at (4,3,3) in World Space
+        cam.camTarget - camTransform, // looks at origin
+        cam.upVector  // Up Vector
+    );
+    shader.SetUniformMat4f("View", view);
+
+    GLCall(glViewport(0, 0, width / 2.0f, height));
+    Draw(m, shader);
+
+    view = glm::lookAt(
+        cam.camPos + camTransform, // Camera is at (4,3,3) in World Space
+        cam.camTarget + camTransform, // looks at origin
+        cam.upVector  // Up Vector
+    );
+    shader.SetUniformMat4f("View", view);
+
+    GLCall(glViewport(width / 2.0f, 0, width / 2.0f, height));
+    Draw(m, shader);
+}
+
+void Renderer::MonoscopicDraw(const Mesh& m, const Shader& shader) const
+{
+}
+
+Renderer::Renderer(GLFWwindow* win)
+{
+    window = win;
 }
 
 void Renderer::Clear() const

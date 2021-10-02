@@ -64,24 +64,29 @@ int main(void)
         GLCall(glDepthFunc(GL_LESS));
         
 
-        glm::vec3 camPos = glm::vec3(2, 1, 3);
+        Camera cam;
+        cam.camPos = glm::vec3(0, 10, 30);
+        cam.camTarget = glm::vec3(0, 0, 0);
+        cam.upVector = glm::vec3(0, 1, 0);
 
-        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / 2.0f / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
         //glm::mat4 proj = glm::perspective<float>(60.0f, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 150.0f);
         glm::mat4 view = glm::lookAt(
-            camPos, // Camera is at (4,3,3) in World Space
-            glm::vec3(0,0,0), // looks at origin
-            glm::vec3(0,1,0)  // Up Vector
+            cam.camPos, // Camera World Space position
+            cam.camTarget, // looks at origin
+            cam.upVector  // Up Vector
         );
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f));
 
         glm::mat4 mvp = proj * view * model;
 
         Shader shader("res/shaders/Basic.shader");
         shader.Bind();
         shader.SetUniform4f("u_Color", 0.8f, 0.3f, 0.8f, 1.0f);
-        shader.SetUniformMat4f("u_MVP", mvp);
-        shader.SetUniform3f("viewPos", camPos);
+        shader.SetUniformMat4f("Model", model);
+        shader.SetUniformMat4f("View", view);
+        shader.SetUniformMat4f("Projection", proj);
+        shader.SetUniform3f("viewPos", cam.camPos);
 
         Texture texture("res/textures/Apple.png");
         texture.Bind();
@@ -89,7 +94,7 @@ int main(void)
         
         shader.Unbind();
 
-        Renderer renderer;
+        Renderer renderer(window);
 
         float r = 0.0f;
         float increment = 0.05f;
@@ -102,9 +107,15 @@ int main(void)
             shader.Bind();
             shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
 
-            //renderer.Draw(planeMesh, shader);
+            /*
+            GLCall(glViewport(0, 0, SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT));
             renderer.Draw(cubeMesh, shader);
-            //renderer.Draw(dollMesh, shader);
+
+            GLCall(glViewport(SCREEN_WIDTH * 0.5f, 0, SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT));
+            renderer.Draw(cubeMesh, shader);
+            */
+
+            renderer.StereoscopicDraw(cubeMesh, shader, cam, 0.64f);
 
             if (r > 1.0f)
                 increment = -0.05f;

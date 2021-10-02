@@ -9,12 +9,14 @@ out vec2 v_TexCoord;
 out vec3 normal;
 out vec3 FragPos;
 
-uniform mat4 u_MVP;
+uniform mat4 Model;
+uniform mat4 View;
+uniform mat4 Projection;
 
 void main()
 {
-   gl_Position = u_MVP * vec4(position,1);
-   FragPos = position;
+   gl_Position = Projection * View * Model * vec4(position, 1.0);
+   FragPos = vec3(Model * vec4(position, 1.0));
    v_TexCoord = texCoord;
    normal = v_normal;
 };
@@ -34,8 +36,9 @@ uniform vec3 viewPos;
 
 void main()
 {
-	vec3 lightPos = vec3(1, 2, 3);
-	vec3 lightDir = normalize(lightPos - FragPos);
+	//vec3 lightPos = vec3(1, 2, 3);
+	//vec3 lightDir = normalize(lightPos - FragPos);
+	vec3 lightDir = normalize(vec3(1, 2, 3));
 	vec3 lightColor = vec3(1, 0.9, 0.8);
 	vec3 norm = normalize(normal);
 
