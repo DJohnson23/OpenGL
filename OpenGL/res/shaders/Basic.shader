@@ -18,7 +18,7 @@ void main()
    gl_Position = Projection * View * Model * vec4(position, 1.0);
    FragPos = vec3(Model * vec4(position, 1.0));
    v_TexCoord = texCoord;
-   normal = v_normal;
+   normal = mat3(transpose(inverse(Model))) * v_normal;
 };
 
 #shader fragment

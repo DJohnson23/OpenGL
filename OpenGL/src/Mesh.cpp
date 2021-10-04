@@ -60,7 +60,25 @@ void Mesh::print(std::string name = "Mesh")
 	std::cout << "---------- " << name << " END ----------" << std::endl;
 }
 
-std::vector<std::string> tokenize(std::string s, std::string del = " ") {
+
+std::vector<std::string> tokenize(std::string s) {
+	std::stringstream stream(s);
+
+	std::vector<std::string> result;
+
+	std::string token;
+	while (stream >> token)
+	{
+		result.push_back(token);
+	}
+
+	std::cout << std::endl;
+
+	return result;
+}
+
+
+std::vector<std::string> tokenize(std::string s, std::string del) {
 	int start = 0;
 	int end = s.find(del);
 
@@ -119,7 +137,9 @@ Mesh Mesh::LoadMesh(const std::string& filepath)
 	while (getline(stream, line)) 
 	{
 		std::vector<std::string> tokens = tokenize(line);
-		
+		if (tokens.size() == 0)
+			continue;
+
 		if (tokens[0] == "v")
 		{
 			vPositions.push_back(stoVec3(tokens, 1));

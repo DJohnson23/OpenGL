@@ -56,6 +56,7 @@ int main(void)
         Mesh cubeMesh = Mesh::Cube();
         Mesh planeMesh = Mesh::Plane();
         //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
+        Mesh octahedron = Mesh::LoadMesh("res/meshes/OctahedronWire.obj");
         
 
         GLCall(glEnable(GL_BLEND));
@@ -65,7 +66,7 @@ int main(void)
         
 
         Camera cam;
-        cam.camPos = glm::vec3(0, 10, 30);
+        cam.camPos = glm::vec3(0, 5, 10);
         cam.camTarget = glm::vec3(0, 0, 0);
         cam.upVector = glm::vec3(0, 1, 0);
 
@@ -76,9 +77,18 @@ int main(void)
             cam.camTarget, // looks at origin
             cam.upVector  // Up Vector
         );
-        glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f, 10.0f, 10.0f));
+        
+        glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
+        float rotationAngle = 0.0f;
+        glm::vec3 rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+        glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
-        glm::mat4 mvp = proj * view * model;
+
+        glm::mat4 tranMat = glm::translate(glm::mat4(1.0f), translation);
+        glm::mat4 rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
+        glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), scale);
+
+        glm::mat4 model = tranMat * rotMat * scaleMat;
 
         Shader shader("res/shaders/Basic.shader");
         shader.Bind();
@@ -96,6 +106,8 @@ int main(void)
 
         Renderer renderer(window);
 
+        float ipd = 0.64f;
+
         float r = 0.0f;
         float increment = 0.05f;
         /* Loop until the user closes the window */
@@ -105,17 +117,24 @@ int main(void)
             renderer.Clear();
 
             shader.Bind();
-            shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
+            //shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
+            shader.SetUniform4f("u_Color", 1.0f, 1.0f, 1.0f, 1.0f);
 
-            /*
-            GLCall(glViewport(0, 0, SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT));
-            renderer.Draw(cubeMesh, shader);
+            rotationAngle += 0.05f;
 
-            GLCall(glViewport(SCREEN_WIDTH * 0.5f, 0, SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT));
-            renderer.Draw(cubeMesh, shader);
-            */
+            while (rotationAngle > 360)
+                rotationAngle -= 360;
 
-            renderer.StereoscopicDraw(cubeMesh, shader, cam, 0.64f);
+            rotationAngle = 0.785f;
+
+            rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
+            model = tranMat * rotMat * scaleMat;
+
+            shader.SetUniformMat4f("Model", model);
+
+
+            //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
+            renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
 
             if (r > 1.0f)
                 increment = -0.05f;
