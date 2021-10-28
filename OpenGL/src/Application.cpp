@@ -19,8 +19,10 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-static const int SCREEN_WIDTH = 960;
-static const int SCREEN_HEIGHT = 540;
+static const int SCREEN_WIDTH = 1920;
+static const int SCREEN_HEIGHT = 1080;
+
+static const int RIGHT_EYE_MONITOR = 1;
 
 int main(void) 
 {
@@ -34,8 +36,20 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    int monitorCount;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+    std::cout << "Monitor Count:" << monitorCount << std::endl;
+
+    int rightMonitorIndex = RIGHT_EYE_MONITOR;
+
+    if (monitorCount <= RIGHT_EYE_MONITOR)
+    {
+        std::cout << "No right eye monitor" << std::endl;
+        rightMonitorIndex = 0;
+    }
+
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", monitors[rightMonitorIndex], NULL);
     if (!window)
     {
         glfwTerminate();
@@ -66,11 +80,11 @@ int main(void)
         
 
         Camera cam;
-        cam.camPos = glm::vec3(0, 5, 10);
+        cam.camPos = glm::vec3(0, 0, 10);
         cam.camTarget = glm::vec3(0, 0, 0);
         cam.upVector = glm::vec3(0, 1, 0);
 
-        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / 2.0f / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
         //glm::mat4 proj = glm::perspective<float>(60.0f, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 150.0f);
         glm::mat4 view = glm::lookAt(
             cam.camPos, // Camera World Space position
@@ -92,7 +106,7 @@ int main(void)
 
         Shader shader("res/shaders/Basic.shader");
         shader.Bind();
-        shader.SetUniform4f("u_Color", 0.8f, 0.3f, 0.8f, 1.0f);
+        shader.SetUniform4f("u_Color", 0.0f, 1.0f, 0.0f, 1.0f);
         shader.SetUniformMat4f("Model", model);
         shader.SetUniformMat4f("View", view);
         shader.SetUniformMat4f("Projection", proj);
@@ -104,8 +118,22 @@ int main(void)
         
         shader.Unbind();
 
+        glm::mat4 orthoModel = glm::mat4(1.0f);
+        glm::mat4 orthoView = glm::mat4(1.0f);
+        glm::mat4 orthoProj = glm::ortho(0.0f, SCREEN_WIDTH * 1.0f, 0.0f, SCREEN_HEIGHT * 1.0f, -1.0f, 1.0f);
+
+        Shader lineShader("res/shaders/Line.shader");
+        lineShader.Bind();
+        lineShader.SetUniform4f("u_Color", 1.0f, 1.0f, 1.0f, 1.0f);
+        lineShader.SetUniformMat4f("Model", orthoModel);
+        lineShader.SetUniformMat4f("View", orthoView);
+        lineShader.SetUniformMat4f("Projection", orthoProj);
+
+        lineShader.Unbind();
+
         Renderer renderer(window);
 
+        bool calibrating = true;
         float ipd = 0.64f;
 
         float r = 0.0f;
@@ -117,24 +145,49 @@ int main(void)
             renderer.Clear();
 
             shader.Bind();
-            //shader.SetUniform4f("u_Color", r, 0.3f, 0.8f, 1.0f);
-            shader.SetUniform4f("u_Color", 1.0f, 1.0f, 1.0f, 1.0f);
 
             rotationAngle += 0.05f;
 
             while (rotationAngle > 360)
                 rotationAngle -= 360;
 
-            rotationAngle = 0.785f;
+            //rotationAngle = 0.785f;
 
             rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
             model = tranMat * rotMat * scaleMat;
 
             shader.SetUniformMat4f("Model", model);
 
+            shader.Unbind();
+
 
             //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
-            renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
+            //renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
+            renderer.MonoscopicDraw(octahedron, shader);
+
+
+            // ---------- Calibration lines ----------
+
+            if (calibrating)
+            {
+                glm::vec2 leftMiddle = glm::vec2(0, SCREEN_HEIGHT / 2.0f);
+                glm::vec2 rightMiddle = glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT / 2.0f);
+                glm::vec2 topMiddle = glm::vec2(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT);
+                glm::vec2 bottomMiddle = glm::vec2(SCREEN_WIDTH / 2.0f, 0);
+
+                renderer.DrawLine(leftMiddle, rightMiddle, 5, lineShader);
+                renderer.DrawLine(topMiddle, bottomMiddle, 5, lineShader);
+
+                glm::vec2 screenCenter = glm::vec2(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
+
+                float circleSpacing = SCREEN_HEIGHT / 8.0f;
+                renderer.DrawCircle(screenCenter, circleSpacing * 1, 5, 50, lineShader);
+                renderer.DrawCircle(screenCenter, circleSpacing * 2, 5, 50, lineShader);
+                renderer.DrawCircle(screenCenter, circleSpacing * 3, 5, 50, lineShader);
+                renderer.DrawCircle(screenCenter, circleSpacing * 4, 5, 50, lineShader);
+            }
+
+            // ---------- Calibration lines ----------
 
             if (r > 1.0f)
                 increment = -0.05f;

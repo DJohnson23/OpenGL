@@ -4,6 +4,10 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <iostream>
+#include <math.h>
+#include <memory>
+
+const float Renderer::PI = 3.141592f;
 
 void GLClearError()
 {
@@ -27,6 +31,8 @@ void Renderer::StereoscopicDraw(const Mesh& m, Shader& shader, const Camera cam,
     glfwGetWindowSize(window, &width, &height);
 
     float halfIpd = ipd / 2;
+
+    shader.Bind();
 
     glm::vec3 forward = cam.camTarget - cam.camPos;
     glm::vec3 right = glm::normalize(glm::cross(forward, cam.upVector));
@@ -56,6 +62,130 @@ void Renderer::StereoscopicDraw(const Mesh& m, Shader& shader, const Camera cam,
 
 void Renderer::MonoscopicDraw(const Mesh& m, const Shader& shader) const
 {
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    GLCall(glViewport(0, 0, width, height));
+    Draw(m, shader);
+}
+
+glm::vec2* Renderer::LinePoints(glm::vec2& start, glm::vec2& end, float thickness) const
+{
+    float halfThick = thickness / 2;
+    glm::vec2 dir = glm::normalize(end - start);
+    glm::vec2 perp = glm::vec2(-dir.y, dir.x);
+
+    glm::vec2 points[] =
+    {
+        start + (perp * halfThick),
+        end + (perp * halfThick),
+        end - (perp * halfThick),
+        start - (perp * halfThick)
+    };
+
+    return points;
+}
+
+void Renderer::DrawLine(glm::vec2& start, glm::vec2& end, float thickness, const Shader& shader) const
+{
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    GLCall(glViewport(0, 0, width, height));
+
+    glm::vec2* points = LinePoints(start, end, thickness);
+
+    float verts[] =
+    {
+        points[0].x, points[0].y, 0.0f,
+        points[1].x, points[1].y, 0.0f,
+        points[2].x, points[2].y, 0.0f,
+        points[3].x, points[3].y, 0.0f
+    };
+
+    VertexArray va;
+    VertexBuffer vb(verts, 4 * 3 * sizeof(float));
+
+    VertexBufferLayout layout;
+    layout.Push<float>(3);
+    va.AddBuffer(vb, layout);
+
+    const unsigned int tris[] =
+    {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    // Index Buffer object
+    IndexBuffer ib(tris, 6);
+
+    Draw(va, ib, shader);
+}
+
+void Renderer::DrawCircle(glm::vec2& center, float radius, float thickness, int segments, const Shader& shader) const
+{
+    float halfThick = thickness / 2.0f;
+
+    int numVerts = segments * 2;
+
+    float* verts = new float[numVerts * 3];
+    unsigned int* tris = new unsigned int[segments * 2 * 3];
+
+    int v = 0;
+    for (int i = 0; i < segments; i++)
+    {
+        float theta = (float)i / segments * 2 * PI;
+
+        float y = center.y + radius * sinf(theta);
+        float x = center.x + radius * cosf(theta);
+
+        glm::vec2 p = glm::vec2(x, y);
+        glm::vec2 dir = glm::normalize(center - p);
+
+        glm::vec2 close = p + dir * halfThick;
+        glm::vec2 far = p - dir * halfThick;
+
+        verts[v++] = close.x;
+        verts[v++] = close.y;
+        verts[v++] = 0.0f;
+               
+        verts[v++] = far.x;
+        verts[v++] = far.y;
+        verts[v++] = 0.0f;
+    }
+
+    int t = 0;
+    for (int i = 0; i < segments - 1; i++)
+    {
+        int v0 = i * 2;
+
+        tris[t++] = v0 + 0;
+        tris[t++] = v0 + 1;
+        tris[t++] = v0 + 3;
+
+        tris[t++] = v0 + 0;
+        tris[t++] = v0 + 3;
+        tris[t++] = v0 + 2;
+    }
+
+    tris[t++] = numVerts - 2;
+    tris[t++] = 1;
+    tris[t++] = 0;
+
+    tris[t++] = numVerts - 2;
+    tris[t++] = numVerts - 1;
+    tris[t++] = 1;
+
+    VertexArray va;
+    VertexBuffer vb(verts, numVerts * 3 * sizeof(float));
+
+    VertexBufferLayout layout;
+    layout.Push<float>(3);
+    va.AddBuffer(vb, layout);
+
+    // Index Buffer object
+    IndexBuffer ib(tris, numVerts * 3);
+
+    Draw(va, ib, shader);
 }
 
 Renderer::Renderer(GLFWwindow* win)
@@ -106,8 +236,6 @@ void Renderer::Draw(const Mesh& m, const Shader& shader) const
     layout.Push<float>(2);
     layout.Push<float>(3);
     va.AddBuffer(vb, layout);
-
-    const unsigned int* tris = m.triangles.data();
 
     // Index Buffer object
     IndexBuffer ib(m.triangles.data(), m.triangles.size());

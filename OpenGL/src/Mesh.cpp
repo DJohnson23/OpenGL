@@ -72,8 +72,6 @@ std::vector<std::string> tokenize(std::string s) {
 		result.push_back(token);
 	}
 
-	std::cout << std::endl;
-
 	return result;
 }
 
