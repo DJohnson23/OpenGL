@@ -40,16 +40,16 @@ int main(void)
     GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
     std::cout << "Monitor Count:" << monitorCount << std::endl;
 
-    int rightMonitorIndex = RIGHT_EYE_MONITOR;
+    GLFWmonitor* rightMonitor = nullptr;
 
     if (monitorCount <= RIGHT_EYE_MONITOR)
-    {
         std::cout << "No right eye monitor" << std::endl;
-        rightMonitorIndex = 0;
-    }
+    else
+        rightMonitor = monitors[RIGHT_EYE_MONITOR];
+
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", monitors[rightMonitorIndex], NULL);
+    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", rightMonitor, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -71,6 +71,21 @@ int main(void)
         Mesh planeMesh = Mesh::Plane();
         //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
         Mesh octahedron = Mesh::LoadMesh("res/meshes/OctahedronWire.obj");
+
+        glm::vec3 leftMiddle = glm::vec3(0, SCREEN_HEIGHT / 2.0f, 0);
+        glm::vec3 rightMiddle = glm::vec3(SCREEN_WIDTH, SCREEN_HEIGHT / 2.0f, 0);
+        glm::vec3 topMiddle = glm::vec3(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT, 0);
+        glm::vec3 bottomMiddle = glm::vec3(SCREEN_WIDTH / 2.0f, 0, 0);
+        glm::vec3 screenCenter = glm::vec3(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f, 0);
+
+        Mesh line1 = Mesh::Line(leftMiddle, rightMiddle, 5);
+        Mesh line2 = Mesh::Line(topMiddle, bottomMiddle, 5);
+
+        float circleSpacing = SCREEN_HEIGHT / 8.0f;
+        Mesh circle1 = Mesh::Circle(screenCenter, circleSpacing * 1, 5);
+        Mesh circle2 = Mesh::Circle(screenCenter, circleSpacing * 2, 5);
+        Mesh circle3 = Mesh::Circle(screenCenter, circleSpacing * 3, 5);
+        Mesh circle4 = Mesh::Circle(screenCenter, circleSpacing * 4, 5);
         
 
         GLCall(glEnable(GL_BLEND));
@@ -170,21 +185,13 @@ int main(void)
 
             if (calibrating)
             {
-                glm::vec2 leftMiddle = glm::vec2(0, SCREEN_HEIGHT / 2.0f);
-                glm::vec2 rightMiddle = glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT / 2.0f);
-                glm::vec2 topMiddle = glm::vec2(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT);
-                glm::vec2 bottomMiddle = glm::vec2(SCREEN_WIDTH / 2.0f, 0);
+                renderer.MonoscopicDraw(line1, lineShader);
+                renderer.MonoscopicDraw(line2, lineShader);
 
-                renderer.DrawLine(leftMiddle, rightMiddle, 5, lineShader);
-                renderer.DrawLine(topMiddle, bottomMiddle, 5, lineShader);
-
-                glm::vec2 screenCenter = glm::vec2(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f);
-
-                float circleSpacing = SCREEN_HEIGHT / 8.0f;
-                renderer.DrawCircle(screenCenter, circleSpacing * 1, 5, 50, lineShader);
-                renderer.DrawCircle(screenCenter, circleSpacing * 2, 5, 50, lineShader);
-                renderer.DrawCircle(screenCenter, circleSpacing * 3, 5, 50, lineShader);
-                renderer.DrawCircle(screenCenter, circleSpacing * 4, 5, 50, lineShader);
+                renderer.MonoscopicDraw(circle1, lineShader);
+                renderer.MonoscopicDraw(circle2, lineShader);
+                renderer.MonoscopicDraw(circle3, lineShader);
+                renderer.MonoscopicDraw(circle4, lineShader);
             }
 
             // ---------- Calibration lines ----------

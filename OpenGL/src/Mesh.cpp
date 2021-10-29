@@ -6,6 +6,8 @@
 
 //#define DEBUG_MESH
 
+const float Mesh::PI = 3.141592f;
+
 glm::vec3 stoVec3(std::vector<std::string>& vec, int start = 0)
 {
 	glm::vec3 result = glm::vec3();
@@ -26,6 +28,36 @@ void printVec3(glm::vec3& vec)
 void printVec2(glm::vec2& vec)
 {
 	std::cout << "(" << vec.x << ", " << vec.y << ")";
+}
+
+void Mesh::GenerateVerts()
+{
+	if (verts != nullptr)
+		delete[] verts;
+
+	verts = new float[positions.size() * FLOATS_PER_VERT];
+
+	for (int i = 0; i < positions.size(); i++)
+	{
+		unsigned int index = i * FLOATS_PER_VERT;
+
+		verts[index + 0] = positions[i].x;
+		verts[index + 1] = positions[i].y;
+		verts[index + 2] = positions[i].z;
+
+		verts[index + 3] = texCoords[i].x;
+		verts[index + 4] = texCoords[i].y;
+
+		verts[index + 5] = normals[i].x;
+		verts[index + 6] = normals[i].y;
+		verts[index + 7] = normals[i].z;
+	}
+}
+
+Mesh::~Mesh()
+{
+	if (verts != nullptr)
+		delete[] verts;
 }
 
 void Mesh::print(std::string name = "Mesh")
@@ -58,6 +90,16 @@ void Mesh::print(std::string name = "Mesh")
 	}
 
 	std::cout << "---------- " << name << " END ----------" << std::endl;
+}
+
+float* Mesh::getVerts()
+{
+	if (verts != nullptr)
+		return verts;
+
+	GenerateVerts();
+
+	return verts;
 }
 
 
@@ -113,6 +155,104 @@ Mesh Mesh::Plane()
 	cubeMesh.print("Plane");
 	return cubeMesh;
 #endif
+}
+
+Mesh Mesh::Circle(glm::vec3 center, float radius, float thickness, int segments)
+{
+	Mesh m;
+
+	float halfThick = thickness / 2.0f;
+
+	int numVerts = segments * 2;
+
+	int v = 0;
+	for (int i = 0; i < segments; i++)
+	{
+		float theta = (float)i / segments * 2 * PI;
+
+		float y = center.y + radius * sinf(theta);
+		float x = center.x + radius * cosf(theta);
+
+		glm::vec3 p = glm::vec3(x, y, 0);
+		glm::vec3 dir = glm::normalize(center - p);
+
+		glm::vec3 close = p + dir * halfThick;
+		glm::vec3 far = p - dir * halfThick;
+
+		m.positions.push_back(close);
+		m.positions.push_back(far);
+
+		m.normals.push_back(glm::vec3());
+		m.normals.push_back(glm::vec3());
+
+		m.texCoords.push_back(glm::vec2());
+		m.texCoords.push_back(glm::vec2());
+	}
+
+	int t = 0;
+	for (int i = 0; i < segments - 1; i++)
+	{
+		int v0 = i * 2;
+
+		m.triangles.push_back(v0 + 0);
+		m.triangles.push_back(v0 + 1);
+		m.triangles.push_back(v0 + 3);
+
+		m.triangles.push_back(v0 + 0);
+		m.triangles.push_back(v0 + 3);
+		m.triangles.push_back(v0 + 2);
+	}
+
+	m.triangles.push_back(numVerts - 2);
+	m.triangles.push_back(1);
+	m.triangles.push_back(0);
+
+	m.triangles.push_back(numVerts - 2);
+	m.triangles.push_back(numVerts - 1);
+	m.triangles.push_back(1);
+
+	return m;
+}
+
+Mesh Mesh::Line(glm::vec3 start, glm::vec3 end, float thickness)
+{
+	Mesh m;
+
+	float halfThick = thickness / 2;
+	glm::vec3 dir = glm::normalize(end - start);
+	glm::vec3 perp = glm::vec3(-dir.y, dir.x, 0);
+
+	m.positions =
+	{
+		start + (perp * halfThick),
+		end + (perp * halfThick),
+		end - (perp * halfThick),
+		start - (perp * halfThick)
+	};
+
+	m.texCoords =
+	{
+		glm::vec2(),
+		glm::vec2(),
+		glm::vec2(),
+		glm::vec2()
+	};
+
+	m.normals =
+	{
+		glm::vec3(),
+		glm::vec3(),
+		glm::vec3(),
+		glm::vec3()
+	};
+
+	m.triangles =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	return m;
 }
 
 Mesh Mesh::LoadMesh(const std::string& filepath)

@@ -28,16 +28,12 @@ struct Camera
 class Renderer
 {
 private:
-    static const float PI;
     void Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader) const;
-    void Draw(const Mesh& m, const Shader& shader) const;
-    glm::vec2* LinePoints(glm::vec2& start, glm::vec2& end, float thickness) const;
+    void Draw(Mesh& m, const Shader& shader) const;
     GLFWwindow* window;
 public:
     Renderer(GLFWwindow* win);
     void Clear() const;
-    void StereoscopicDraw(const Mesh& m, Shader& shader, const Camera cam, float ipd) const;
-    void MonoscopicDraw(const Mesh& m, const Shader& shader) const;
-    void DrawLine(glm::vec2& start, glm::vec2& end, float thickness, const Shader& shader) const;
-    void DrawCircle(glm::vec2& center, float radius, float thickness, int segments, const Shader& shader) const;
+    void StereoscopicDraw(Mesh& m, Shader& shader, const Camera cam, float ipd) const;
+    void MonoscopicDraw(Mesh& m, const Shader& shader) const;
 };
