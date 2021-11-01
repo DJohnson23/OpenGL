@@ -24,7 +24,8 @@ public:
 
 	static Mesh Cube();
 	static Mesh Plane();
-	static Mesh Circle(glm::vec3 center, float radius, float thickness, int segments = 50);
+	static Mesh DoublePyramid(float squareLength, float halfHeight, float radius);
+	static Mesh Circle(glm::vec3 center, float radius, float thickness, int segments = 60);
 	static Mesh Line(glm::vec3 start, glm::vec3 end, float thickness);
 	static Mesh LoadMesh(const std::string& filepath);
 

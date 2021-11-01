@@ -157,6 +157,13 @@ Mesh Mesh::Plane()
 #endif
 }
 
+Mesh Mesh::DoublePyramid(float squareLength, float halfHeight, float radius)
+{
+	//TODO cylinders in square, joints, cylinders for height, joints
+
+	return Mesh();
+}
+
 Mesh Mesh::Circle(glm::vec3 center, float radius, float thickness, int segments)
 {
 	Mesh m;
@@ -281,6 +288,8 @@ Mesh Mesh::LoadMesh(const std::string& filepath)
 		if (tokens[0] == "v")
 		{
 			vPositions.push_back(stoVec3(tokens, 1));
+
+			glm::vec3 point = vPositions[vPositions.size() - 1];
 		}
 		else if (tokens[0] == "vn")
 		{

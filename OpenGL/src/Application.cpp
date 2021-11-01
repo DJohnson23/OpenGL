@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <chrono>
 
 #include "Renderer.h"
 
@@ -15,6 +16,7 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Input.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -23,6 +25,11 @@ static const int SCREEN_WIDTH = 1920;
 static const int SCREEN_HEIGHT = 1080;
 
 static const int RIGHT_EYE_MONITOR = 1;
+static const float PI = 3.141592f;
+static const float PI2 = PI * 2;
+
+static const float ROT_SPEED = PI / 4.0f;
+static const float CAM_SPEED = 0.1f;
 
 int main(void) 
 {
@@ -66,6 +73,8 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
+    Input::Initialize(window);
+
     {
         Mesh cubeMesh = Mesh::Cube();
         Mesh planeMesh = Mesh::Plane();
@@ -78,14 +87,16 @@ int main(void)
         glm::vec3 bottomMiddle = glm::vec3(SCREEN_WIDTH / 2.0f, 0, 0);
         glm::vec3 screenCenter = glm::vec3(SCREEN_WIDTH / 2.0f, SCREEN_HEIGHT / 2.0f, 0);
 
-        Mesh line1 = Mesh::Line(leftMiddle, rightMiddle, 5);
-        Mesh line2 = Mesh::Line(topMiddle, bottomMiddle, 5);
+        float lineThickness = 1.0f;
+
+        Mesh line1 = Mesh::Line(leftMiddle, rightMiddle, lineThickness);
+        Mesh line2 = Mesh::Line(topMiddle, bottomMiddle, lineThickness);
 
         float circleSpacing = SCREEN_HEIGHT / 8.0f;
-        Mesh circle1 = Mesh::Circle(screenCenter, circleSpacing * 1, 5);
-        Mesh circle2 = Mesh::Circle(screenCenter, circleSpacing * 2, 5);
-        Mesh circle3 = Mesh::Circle(screenCenter, circleSpacing * 3, 5);
-        Mesh circle4 = Mesh::Circle(screenCenter, circleSpacing * 4, 5);
+        Mesh circle1 = Mesh::Circle(screenCenter, circleSpacing * 1, lineThickness);
+        Mesh circle2 = Mesh::Circle(screenCenter, circleSpacing * 2, lineThickness);
+        Mesh circle3 = Mesh::Circle(screenCenter, circleSpacing * 3, lineThickness);
+        Mesh circle4 = Mesh::Circle(screenCenter, circleSpacing * 4, lineThickness);
         
 
         GLCall(glEnable(GL_BLEND));
@@ -95,8 +106,8 @@ int main(void)
         
 
         Camera cam;
-        cam.camPos = glm::vec3(0, 0, 10);
-        cam.camTarget = glm::vec3(0, 0, 0);
+        cam.camPos = glm::vec3(0, -1.514, 10);
+        cam.camTarget = glm::vec3(0, -1.514, 0);
         cam.upVector = glm::vec3(0, 1, 0);
 
         glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
@@ -148,30 +159,116 @@ int main(void)
 
         Renderer renderer(window);
 
-        bool calibrating = true;
+        bool calibrating = false;
+        bool rotating = false;
+
         float ipd = 0.64f;
 
         float r = 0.0f;
         float increment = 0.05f;
+
+        long lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        float deltaTime = 0;
+
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
+            long newTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            deltaTime = (newTime - lastTime) / 1000.0f;
+            lastTime = newTime;
+
+            //if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            if (Input::GetKeyDown(GLFW_KEY_SPACE))
+            {
+                rotating = !rotating;
+            }
+
+            if (Input::GetKeyDown(GLFW_KEY_TAB))
+            {
+                calibrating = !calibrating;
+            }
+
+            if (Input::GetKeyDown(GLFW_KEY_ESCAPE))
+            {
+                exit(0);
+            }
+
             /* Render here */
             renderer.Clear();
 
             shader.Bind();
 
-            rotationAngle += 0.05f;
+            if (rotating)
+            {
+                rotationAngle += PI * deltaTime;
+            }
+            else if(Input::GetKey(GLFW_KEY_LEFT))
+            {
+                float speed = ROT_SPEED;
 
-            while (rotationAngle > 360)
-                rotationAngle -= 360;
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                rotationAngle -= speed * deltaTime;
+            }
+            else if (Input::GetKey(GLFW_KEY_RIGHT))
+            {
+                float speed = ROT_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                rotationAngle += speed * deltaTime;
+            }
+
+            while (rotationAngle > PI2)
+            {
+                rotationAngle -= PI2;
+            }
+
+            while (rotationAngle < 0)
+            {
+                rotationAngle += PI2;
+            }
+
+            if (Input::GetKey(GLFW_KEY_UP))
+            {
+                float speed = CAM_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                cam.camPos.z -= speed;
+
+                if (cam.camPos.z < 0)
+                    cam.camPos.z = 0;
+            }
+            else if (Input::GetKey(GLFW_KEY_DOWN))
+            {
+                float speed = CAM_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                cam.camPos.z += speed;
+
+                if (cam.camPos.z < 0)
+                    cam.camPos.z = 0;
+            }
 
             //rotationAngle = 0.785f;
 
             rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
             model = tranMat * rotMat * scaleMat;
 
+            view = glm::lookAt(
+                cam.camPos, // Camera World Space position
+                cam.camTarget, // looks at origin
+                cam.upVector  // Up Vector
+            );
+
             shader.SetUniformMat4f("Model", model);
+            shader.SetUniformMat4f("View", view);
 
             shader.Unbind();
 
@@ -202,6 +299,8 @@ int main(void)
                 increment = 0.05f;
 
             r += increment;
+
+            Input::Update();
 
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
