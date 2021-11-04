@@ -7,8 +7,12 @@
 class Mesh {
 private:
 	static const float PI;
+	static const float SQR2;
 	float* verts = nullptr;
 	void GenerateVerts();
+
+	static void AddCylinder(Mesh& m, float height, float radius, const glm::mat4& transform);
+
 public:
 
 	~Mesh();
@@ -24,7 +28,7 @@ public:
 
 	static Mesh Cube();
 	static Mesh Plane();
-	static Mesh DoublePyramid(float squareLength, float halfHeight, float radius);
+	static Mesh DoublePyramid(float squareLength, float height, float radius);
 	static Mesh Circle(glm::vec3 center, float radius, float thickness, int segments = 60);
 	static Mesh Line(glm::vec3 start, glm::vec3 end, float thickness);
 	static Mesh LoadMesh(const std::string& filepath);

@@ -4,9 +4,13 @@
 #include <sstream>
 #include <vector>
 
+
+#include "glm/gtc/matrix_transform.hpp"
+
 //#define DEBUG_MESH
 
 const float Mesh::PI = 3.141592f;
+const float Mesh::SQR2 = 1.41421356;
 
 glm::vec3 stoVec3(std::vector<std::string>& vec, int start = 0)
 {
@@ -157,11 +161,110 @@ Mesh Mesh::Plane()
 #endif
 }
 
-Mesh Mesh::DoublePyramid(float squareLength, float halfHeight, float radius)
+void Mesh::AddCylinder(Mesh& m, float height, float radius, const glm::mat4& transform)
 {
-	//TODO cylinders in square, joints, cylinders for height, joints
+	const int SEGMENTS = 10;
 
-	return Mesh();
+	int start = m.positions.size();
+
+	for (int i = 0; i < SEGMENTS; i++)
+	{
+		float theta = (float)i / SEGMENTS * 2.0f * PI;
+		float x = radius * cosf(theta);
+		float z = -radius * sinf(theta);
+
+		glm::vec3 p1 = transform * glm::vec4(x, 0, z, 1);
+		glm::vec3 p2 = transform * glm::vec4(x, height, z, 1);
+		glm::vec3 c = transform * glm::vec4(0, 0, 0, 1);
+
+		m.positions.push_back(p1);
+		m.positions.push_back(p2);
+
+		glm::vec3 norm = glm::normalize(p1 - c);
+
+		m.normals.push_back(norm);
+		m.normals.push_back(norm);
+
+		m.texCoords.push_back(glm::vec2());
+		m.texCoords.push_back(glm::vec2());
+	}
+
+	for (int i = 0; i < SEGMENTS - 1; i++)
+	{
+		int v = start + i * 2;
+
+		m.triangles.push_back(v + 0);
+		m.triangles.push_back(v + 2);
+		m.triangles.push_back(v + 3);
+
+		m.triangles.push_back(v + 0);
+		m.triangles.push_back(v + 3);
+		m.triangles.push_back(v + 1);
+	}
+
+	m.triangles.push_back(m.positions.size() - 2);
+	m.triangles.push_back(start);
+	m.triangles.push_back(start + 1);
+
+	m.triangles.push_back(m.positions.size() - 2);
+	m.triangles.push_back(start + 1);
+	m.triangles.push_back(m.positions.size() - 1);
+}
+
+Mesh Mesh::DoublePyramid(float squareLength, float height, float radius)
+{
+	float actualLength = squareLength - 2.0f * radius;
+
+	Mesh m;
+	
+	glm::mat4 moveRight = glm::translate(glm::mat4(1.0f), glm::vec3(actualLength / 2.0f, 0, 0));
+	glm::mat4 moveLeft = glm::translate(glm::mat4(1.0f), glm::vec3(-actualLength / 2.0f, 0, 0));
+	glm::mat4 moveForward = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, actualLength / 2.0f));
+	glm::mat4 moveBack = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -actualLength / 2.0f));
+	glm::mat4 moveUp = glm::translate(glm::mat4(1.0f), glm::vec3(0, height / 2, 0));
+
+	glm::mat4 rotLeft = glm::rotate(glm::mat4(1.0f), PI / 2.0f, glm::vec3(0, 0, 1));
+	glm::mat4 rotForward = glm::rotate(glm::mat4(1.0f), PI / 2.0f, glm::vec3(1, 0, 0));
+
+	glm::mat4 transform = moveUp * moveForward * moveRight * rotLeft;
+	AddCylinder(m, actualLength, radius, transform);
+
+	transform = moveUp * moveBack * moveRight * rotLeft;
+	AddCylinder(m, actualLength, radius, transform);
+	
+	transform = moveUp * moveRight * moveBack * rotForward;
+	AddCylinder(m, actualLength, radius, transform);
+
+	transform = moveUp * moveLeft * moveBack * rotForward;
+	AddCylinder(m, actualLength, radius, transform);
+
+	float xz = 0.5f * squareLength - radius;
+	float y = 0.5f * height - radius;
+	float legHeight = sqrtf((2 * xz * xz) + (y * y));
+	float d = actualLength / 2 * SQR2;
+
+	float theta = PI / 2.0f - atan2f(y, d);
+	
+	rotForward = glm::rotate(glm::mat4(1.0f), theta, glm::vec3(1, 0, 0));
+	moveUp = glm::translate(glm::mat4(1.0f), glm::vec3(0, radius, 0));
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 3 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 5 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 7 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+	
+	return m;
 }
 
 Mesh Mesh::Circle(glm::vec3 center, float radius, float thickness, int segments)

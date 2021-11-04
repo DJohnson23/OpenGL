@@ -31,6 +31,10 @@ static const float PI2 = PI * 2;
 static const float ROT_SPEED = PI / 4.0f;
 static const float CAM_SPEED = 0.1f;
 
+static const float HEIGHT_SPEED = 0.5f;
+static const float RAD_SPEED = 0.1f;
+static const float LENGTH_SPEED = 0.5f;
+
 int main(void) 
 {
     GLFWwindow* window;
@@ -79,7 +83,8 @@ int main(void)
         Mesh cubeMesh = Mesh::Cube();
         Mesh planeMesh = Mesh::Plane();
         //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
-        Mesh octahedron = Mesh::LoadMesh("res/meshes/OctahedronWire.obj");
+        float radius = 0.1f, height = 1.0f, squareLength = 1.0f;
+        Mesh doublePyramid = Mesh::DoublePyramid(squareLength, height, radius);
 
         glm::vec3 leftMiddle = glm::vec3(0, SCREEN_HEIGHT / 2.0f, 0);
         glm::vec3 rightMiddle = glm::vec3(SCREEN_WIDTH, SCREEN_HEIGHT / 2.0f, 0);
@@ -106,8 +111,8 @@ int main(void)
         
 
         Camera cam;
-        cam.camPos = glm::vec3(0, -1.514, 10);
-        cam.camTarget = glm::vec3(0, -1.514, 0);
+        cam.camPos = glm::vec3(0, 0, 10);
+        cam.camTarget = glm::vec3(0, 0, 0);
         cam.upVector = glm::vec3(0, 1, 0);
 
         glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
@@ -221,6 +226,88 @@ int main(void)
                 rotationAngle += speed * deltaTime;
             }
 
+            bool meshChanged = false;
+
+            if (Input::GetKey(GLFW_KEY_W))
+            {
+                float speed = HEIGHT_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                height += speed * deltaTime;
+                meshChanged = true;
+            }
+            else if (Input::GetKey(GLFW_KEY_S))
+            {
+                float speed = HEIGHT_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                height -= speed * deltaTime;
+
+                if (height < 0.1f)
+                    height = 0.1f;
+
+                meshChanged = true;
+            }
+
+            if (Input::GetKey(GLFW_KEY_E))
+            {
+                float speed = RAD_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                radius += speed * deltaTime;
+                meshChanged = true;
+            }
+            else if (Input::GetKey(GLFW_KEY_Q))
+            {
+                float speed = RAD_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                radius -= speed * deltaTime;
+
+                if (radius < 0.01f)
+                    radius = 0.01f;
+
+                meshChanged = true;
+            }
+
+            if (Input::GetKey(GLFW_KEY_D))
+            {
+                float speed = LENGTH_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                squareLength += speed * deltaTime;
+                meshChanged = true;
+            }
+            else if (Input::GetKey(GLFW_KEY_A))
+            {
+                float speed = LENGTH_SPEED;
+
+                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+                    speed /= 2.0f;
+
+                squareLength -= speed * deltaTime;
+
+                if (squareLength < 0.1f)
+                    squareLength = 0.1f;
+
+                meshChanged = true;
+            }
+
+            if (meshChanged)
+            {
+                doublePyramid = Mesh::DoublePyramid(squareLength, height, radius);
+            }
+
             while (rotationAngle > PI2)
             {
                 rotationAngle -= PI2;
@@ -275,7 +362,7 @@ int main(void)
 
             //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
             //renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
-            renderer.MonoscopicDraw(octahedron, shader);
+            renderer.MonoscopicDraw(doublePyramid, shader);
 
 
             // ---------- Calibration lines ----------
