@@ -35,6 +35,16 @@ static const float HEIGHT_SPEED = 0.5f;
 static const float RAD_SPEED = 0.1f;
 static const float LENGTH_SPEED = 0.5f;
 
+float deltaTime = 0;
+
+void updateValue(float& value, float speed)
+{
+    if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
+        speed /= 2.0f;
+
+    value += speed * deltaTime;
+}
+
 int main(void) 
 {
     GLFWwindow* window;
@@ -83,7 +93,7 @@ int main(void)
         Mesh cubeMesh = Mesh::Cube();
         Mesh planeMesh = Mesh::Plane();
         //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
-        float radius = 0.1f, height = 1.0f, squareLength = 1.0f;
+        float radius = 0.1f, height = 3.0f, squareLength = 2.0f;
         Mesh doublePyramid = Mesh::DoublePyramid(squareLength, height, radius);
 
         glm::vec3 leftMiddle = glm::vec3(0, SCREEN_HEIGHT / 2.0f, 0);
@@ -173,7 +183,6 @@ int main(void)
         float increment = 0.05f;
 
         long lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        float deltaTime = 0;
 
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
@@ -209,43 +218,23 @@ int main(void)
             }
             else if(Input::GetKey(GLFW_KEY_LEFT))
             {
-                float speed = ROT_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                rotationAngle -= speed * deltaTime;
+                updateValue(rotationAngle, -ROT_SPEED);
             }
             else if (Input::GetKey(GLFW_KEY_RIGHT))
             {
-                float speed = ROT_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                rotationAngle += speed * deltaTime;
+                updateValue(rotationAngle, ROT_SPEED);
             }
 
             bool meshChanged = false;
 
             if (Input::GetKey(GLFW_KEY_W))
             {
-                float speed = HEIGHT_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                height += speed * deltaTime;
+                updateValue(height, HEIGHT_SPEED);
                 meshChanged = true;
             }
             else if (Input::GetKey(GLFW_KEY_S))
             {
-                float speed = HEIGHT_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                height -= speed * deltaTime;
+                updateValue(height, -HEIGHT_SPEED);
 
                 if (height < 0.1f)
                     height = 0.1f;
@@ -255,22 +244,12 @@ int main(void)
 
             if (Input::GetKey(GLFW_KEY_E))
             {
-                float speed = RAD_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                radius += speed * deltaTime;
+                updateValue(radius, RAD_SPEED);
                 meshChanged = true;
             }
             else if (Input::GetKey(GLFW_KEY_Q))
             {
-                float speed = RAD_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                radius -= speed * deltaTime;
+                updateValue(radius, -RAD_SPEED);
 
                 if (radius < 0.01f)
                     radius = 0.01f;
@@ -280,22 +259,12 @@ int main(void)
 
             if (Input::GetKey(GLFW_KEY_D))
             {
-                float speed = LENGTH_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                squareLength += speed * deltaTime;
+                updateValue(squareLength, LENGTH_SPEED);
                 meshChanged = true;
             }
             else if (Input::GetKey(GLFW_KEY_A))
             {
-                float speed = LENGTH_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                squareLength -= speed * deltaTime;
+                updateValue(squareLength, -LENGTH_SPEED);
 
                 if (squareLength < 0.1f)
                     squareLength = 0.1f;

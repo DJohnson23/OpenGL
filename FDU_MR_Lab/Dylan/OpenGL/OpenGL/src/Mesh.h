@@ -11,7 +11,8 @@ private:
 	float* verts = nullptr;
 	void GenerateVerts();
 
-	static void AddCylinder(Mesh& m, float height, float radius, const glm::mat4& transform);
+	static void AddCylinder(Mesh& m, const float height, const float radius, const glm::mat4& transform);
+	static void AddSphere(Mesh& m, const float radius, const glm::vec3& center);
 
 public:
 
@@ -28,7 +29,7 @@ public:
 
 	static Mesh Cube();
 	static Mesh Plane();
-	static Mesh DoublePyramid(float squareLength, float height, float radius);
+	static Mesh DoublePyramid(const float squareLength, const float height, const float radius);
 	static Mesh Circle(glm::vec3 center, float radius, float thickness, int segments = 60);
 	static Mesh Line(glm::vec3 start, glm::vec3 end, float thickness);
 	static Mesh LoadMesh(const std::string& filepath);

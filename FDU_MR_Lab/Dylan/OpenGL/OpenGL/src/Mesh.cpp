@@ -161,7 +161,7 @@ Mesh Mesh::Plane()
 #endif
 }
 
-void Mesh::AddCylinder(Mesh& m, float height, float radius, const glm::mat4& transform)
+void Mesh::AddCylinder(Mesh& m, const float height, const float radius, const glm::mat4& transform)
 {
 	const int SEGMENTS = 10;
 
@@ -211,7 +211,95 @@ void Mesh::AddCylinder(Mesh& m, float height, float radius, const glm::mat4& tra
 	m.triangles.push_back(m.positions.size() - 1);
 }
 
-Mesh Mesh::DoublePyramid(float squareLength, float height, float radius)
+void Mesh::AddSphere(Mesh& m, const float radius, const glm::vec3& center)
+{
+	const int HEIGHT_SEGMENTS = 10;
+	const int ROUND_SEGMENTS = 10;
+
+	const float deltaSphereTheta = PI / HEIGHT_SEGMENTS;
+	const float deltaCircleTheta = 2 * PI / ROUND_SEGMENTS;
+
+	int start = m.positions.size();
+
+	m.positions.push_back(center + glm::vec3(0, radius, 0));
+	m.normals.push_back(glm::vec3(0, 1, 0));
+	m.texCoords.push_back(glm::vec2());
+
+	for (int i = 1; i < HEIGHT_SEGMENTS; i++)
+	{
+		float sphereTheta = (PI / 2.0f) - deltaSphereTheta * i;
+		float r = radius * cosf(sphereTheta);
+		float y = radius * sinf(sphereTheta);
+
+		for (int j = 0; j < ROUND_SEGMENTS; j++)
+		{
+			float circleTheta = j * deltaCircleTheta;
+
+			float x = r * cosf(circleTheta);
+			float z = r * sinf(circleTheta);
+
+			glm::vec3 relPoint(x, y, z);
+
+			m.positions.push_back(center + relPoint);
+			m.normals.push_back(glm::normalize(relPoint));
+			m.texCoords.push_back(glm::vec2());
+		}
+	}
+
+	m.positions.push_back(center + glm::vec3(0, -radius, 0));
+	m.normals.push_back(glm::vec3(0, -1, 0));
+	m.texCoords.push_back(glm::vec2());
+
+	int last = m.positions.size() - 1;
+
+	for (int i = 0; i < HEIGHT_SEGMENTS - 2; i++)
+	{
+		int v = start + 1 + i * ROUND_SEGMENTS;
+		for (int j = 0; j < ROUND_SEGMENTS - 1; j++)
+		{
+			int curV = v + j;
+			m.triangles.push_back(curV);
+			m.triangles.push_back(curV + ROUND_SEGMENTS);
+			m.triangles.push_back(curV + ROUND_SEGMENTS + 1);
+
+			m.triangles.push_back(curV);
+			m.triangles.push_back(curV + ROUND_SEGMENTS + 1);
+			m.triangles.push_back(curV + 1);
+		}
+
+		m.triangles.push_back(v + ROUND_SEGMENTS - 1);
+		m.triangles.push_back(v + ROUND_SEGMENTS + ROUND_SEGMENTS - 1);
+		m.triangles.push_back(v + ROUND_SEGMENTS);
+
+		m.triangles.push_back(v + ROUND_SEGMENTS - 1);
+		m.triangles.push_back(v + ROUND_SEGMENTS);
+		m.triangles.push_back(v);
+	}
+
+	for (int i = 1; i < ROUND_SEGMENTS; i++)
+	{
+		int vTop = start + i;
+		int vBottom = last - i;
+
+		m.triangles.push_back(start);
+		m.triangles.push_back(vTop);
+		m.triangles.push_back(vTop + 1);
+
+		m.triangles.push_back(last);
+		m.triangles.push_back(vBottom);
+		m.triangles.push_back(vBottom - 1);
+	}
+
+	m.triangles.push_back(start);
+	m.triangles.push_back(start + ROUND_SEGMENTS);
+	m.triangles.push_back(start + 1);
+
+	m.triangles.push_back(last);
+	m.triangles.push_back(last - ROUND_SEGMENTS);
+	m.triangles.push_back(last - 1);
+}
+
+Mesh Mesh::DoublePyramid(const float squareLength, const float height, const float radius)
 {
 	float actualLength = squareLength - 2.0f * radius;
 
@@ -226,6 +314,7 @@ Mesh Mesh::DoublePyramid(float squareLength, float height, float radius)
 	glm::mat4 rotLeft = glm::rotate(glm::mat4(1.0f), PI / 2.0f, glm::vec3(0, 0, 1));
 	glm::mat4 rotForward = glm::rotate(glm::mat4(1.0f), PI / 2.0f, glm::vec3(1, 0, 0));
 
+	//Square
 	glm::mat4 transform = moveUp * moveForward * moveRight * rotLeft;
 	AddCylinder(m, actualLength, radius, transform);
 
@@ -248,6 +337,7 @@ Mesh Mesh::DoublePyramid(float squareLength, float height, float radius)
 	rotForward = glm::rotate(glm::mat4(1.0f), theta, glm::vec3(1, 0, 0));
 	moveUp = glm::translate(glm::mat4(1.0f), glm::vec3(0, radius, 0));
 
+	//Bottom Legs
 	rotLeft = glm::rotate(glm::mat4(1.0f), PI / 4.0f, glm::vec3(0, 1, 0));
 	transform = moveUp * rotLeft * rotForward;
 	AddCylinder(m, legHeight, radius, transform);
@@ -263,6 +353,36 @@ Mesh Mesh::DoublePyramid(float squareLength, float height, float radius)
 	rotLeft = glm::rotate(glm::mat4(1.0f), 7 * PI / 4.0f, glm::vec3(0, 1, 0));
 	transform = moveUp * rotLeft * rotForward;
 	AddCylinder(m, legHeight, radius, transform);
+
+	//Top legs
+	rotForward = glm::rotate(glm::mat4(1.0f), theta + PI, glm::vec3(1, 0, 0));
+	moveUp = glm::translate(glm::mat4(1.0f), glm::vec3(0, height - radius, 0));
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 3 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 5 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	rotLeft = glm::rotate(glm::mat4(1.0f), 7 * PI / 4.0f, glm::vec3(0, 1, 0));
+	transform = moveUp * rotLeft * rotForward;
+	AddCylinder(m, legHeight, radius, transform);
+
+	// JOINTS
+	AddSphere(m, radius, glm::vec3(0, radius, 0));
+	AddSphere(m, radius, glm::vec3(0, height - radius, 0));
+
+	float sphereD = squareLength / 2.0f - radius;
+	AddSphere(m, radius, glm::vec3(sphereD, height / 2, sphereD));
+	AddSphere(m, radius, glm::vec3(-sphereD, height / 2, sphereD));
+	AddSphere(m, radius, glm::vec3(sphereD, height / 2, -sphereD));
+	AddSphere(m, radius, glm::vec3(-sphereD, height / 2, -sphereD));
 	
 	return m;
 }
