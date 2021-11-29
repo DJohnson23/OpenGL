@@ -34,6 +34,7 @@ private:
 public:
     Renderer(GLFWwindow* win);
     void Clear() const;
+    void ClearDepthBuffer() const;
     void StereoscopicDraw(Mesh& m, Shader& shader, const Camera cam, float ipd) const;
     void MonoscopicDraw(Mesh& m, const Shader& shader) const;
 };

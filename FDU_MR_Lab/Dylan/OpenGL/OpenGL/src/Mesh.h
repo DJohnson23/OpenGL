@@ -33,5 +33,6 @@ public:
 	static Mesh Circle(glm::vec3 center, float radius, float thickness, int segments = 60);
 	static Mesh Line(glm::vec3 start, glm::vec3 end, float thickness);
 	static Mesh LoadMesh(const std::string& filepath);
+	static Mesh UIRectangle(glm::vec2 min, glm::vec2 max);
 
 };

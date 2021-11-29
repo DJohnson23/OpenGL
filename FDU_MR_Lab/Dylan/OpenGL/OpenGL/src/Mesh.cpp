@@ -546,3 +546,40 @@ Mesh Mesh::LoadMesh(const std::string& filepath)
 	
 	return m;
 }
+
+Mesh Mesh::UIRectangle(glm::vec2 min, glm::vec2 max)
+{
+	Mesh m;
+
+	m.positions =
+	{
+		glm::vec3(min.x, min.y, 0.0f),
+		glm::vec3(min.x, max.y, 0.0f),
+		glm::vec3(max.x, max.y, 0.0f),
+		glm::vec3(max.x, min.y, 0.0f)
+	};
+
+	m.texCoords =
+	{
+		glm::vec2(0, 0),
+		glm::vec2(0, 1),
+		glm::vec2(1, 1),
+		glm::vec2(1, 0)
+	};
+
+	m.normals =
+	{
+		glm::vec3(),
+		glm::vec3(),
+		glm::vec3(),
+		glm::vec3()
+	};
+
+	m.triangles =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	return m;
+}

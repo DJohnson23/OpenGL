@@ -21,6 +21,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+
 static const int SCREEN_WIDTH = 1920;
 static const int SCREEN_HEIGHT = 1080;
 
@@ -29,7 +30,7 @@ static const float PI = 3.141592f;
 static const float PI2 = PI * 2;
 
 static const float ROT_SPEED = PI / 4.0f;
-static const float CAM_SPEED = 0.1f;
+static const float CAM_SPEED = 1.0f;
 
 static const float HEIGHT_SPEED = 0.5f;
 static const float RAD_SPEED = 0.1f;
@@ -41,6 +42,8 @@ void updateValue(float& value, float speed)
 {
     if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
         speed /= 2.0f;
+    else if (Input::GetKey(GLFW_KEY_LEFT_CONTROL) || Input::GetKey(GLFW_KEY_RIGHT_CONTROL))
+        speed *= 2.0f;
 
     value += speed * deltaTime;
 }
@@ -70,7 +73,7 @@ int main(void)
 
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", rightMonitor, NULL);
+    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Right Eye", rightMonitor, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -145,19 +148,19 @@ int main(void)
 
         glm::mat4 model = tranMat * rotMat * scaleMat;
 
-        Shader shader("res/shaders/Basic.shader");
-        shader.Bind();
-        shader.SetUniform4f("u_Color", 0.0f, 1.0f, 0.0f, 1.0f);
-        shader.SetUniformMat4f("Model", model);
-        shader.SetUniformMat4f("View", view);
-        shader.SetUniformMat4f("Projection", proj);
-        shader.SetUniform3f("viewPos", cam.camPos);
+        Shader basicShader("res/shaders/Basic.shader");
+        basicShader.Bind();
+        basicShader.SetUniform4f("u_Color", 0.0f, 1.0f, 0.0f, 1.0f);
+        basicShader.SetUniformMat4f("Model", model);
+        basicShader.SetUniformMat4f("View", view);
+        basicShader.SetUniformMat4f("Projection", proj);
+        basicShader.SetUniform3f("viewPos", cam.camPos);
 
-        Texture texture("res/textures/Apple.png");
-        texture.Bind();
-        shader.SetUniform1i("u_Texture", 0);
+        Texture bgImgTex("res/textures/Apple.png");
+        bgImgTex.Bind();
+        //basicShader.SetUniform1i("u_Texture", 0);
         
-        shader.Unbind();
+        basicShader.Unbind();
 
         glm::mat4 orthoModel = glm::mat4(1.0f);
         glm::mat4 orthoView = glm::mat4(1.0f);
@@ -171,6 +174,34 @@ int main(void)
         lineShader.SetUniformMat4f("Projection", orthoProj);
 
         lineShader.Unbind();
+
+        Shader uiShader("res/shaders/ui.shader");
+        uiShader.Bind();
+        uiShader.SetUniform4f("u_Color", 1.0f, 1.0f, 1.0f, 1.0f);
+        uiShader.SetUniformMat4f("Model", orthoModel);
+        uiShader.SetUniformMat4f("View", orthoView);
+        uiShader.SetUniformMat4f("Projection", orthoProj);
+
+        uiShader.SetUniform1i("u_Texture", 0);
+
+        uiShader.Unbind();
+
+        float bgAspect = (float)bgImgTex.GetWidth() / bgImgTex.GetHeight();
+        float imgUIHeight = SCREEN_HEIGHT;
+        float imgUIWidth = bgAspect * imgUIHeight;
+
+        if (bgAspect > (float)SCREEN_WIDTH / SCREEN_HEIGHT)
+        {
+            imgUIWidth = SCREEN_WIDTH;
+            imgUIHeight = (1 / bgAspect) * imgUIWidth;
+        }
+
+        float xMargin = (SCREEN_WIDTH - imgUIWidth) / 2;
+        float yMargin = (SCREEN_HEIGHT - imgUIHeight) / 2;
+        glm::vec2 imgMin = glm::vec2(xMargin, yMargin);
+        glm::vec2 imgMax = glm::vec2(SCREEN_WIDTH - xMargin, SCREEN_HEIGHT - yMargin);
+
+        Mesh background = Mesh::UIRectangle(imgMin, imgMax);
 
         Renderer renderer(window);
 
@@ -187,6 +218,9 @@ int main(void)
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
+            /* Render here */
+            renderer.Clear();
+
             long newTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             deltaTime = (newTime - lastTime) / 1000.0f;
             lastTime = newTime;
@@ -206,11 +240,6 @@ int main(void)
             {
                 exit(0);
             }
-
-            /* Render here */
-            renderer.Clear();
-
-            shader.Bind();
 
             if (rotating)
             {
@@ -289,30 +318,19 @@ int main(void)
 
             if (Input::GetKey(GLFW_KEY_UP))
             {
-                float speed = CAM_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                cam.camPos.z -= speed;
-
-                if (cam.camPos.z < 0)
-                    cam.camPos.z = 0;
+                updateValue(cam.camPos.z, CAM_SPEED);
             }
             else if (Input::GetKey(GLFW_KEY_DOWN))
             {
-                float speed = CAM_SPEED;
-
-                if (Input::GetKey(GLFW_KEY_LEFT_SHIFT) || Input::GetKey(GLFW_KEY_RIGHT_SHIFT))
-                    speed /= 2.0f;
-
-                cam.camPos.z += speed;
+                updateValue(cam.camPos.z, -CAM_SPEED);
 
                 if (cam.camPos.z < 0)
                     cam.camPos.z = 0;
             }
 
             //rotationAngle = 0.785f;
+
+            basicShader.Bind();
 
             rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
             model = tranMat * rotMat * scaleMat;
@@ -323,19 +341,24 @@ int main(void)
                 cam.upVector  // Up Vector
             );
 
-            shader.SetUniformMat4f("Model", model);
-            shader.SetUniformMat4f("View", view);
+            basicShader.SetUniformMat4f("Model", model);
+            basicShader.SetUniformMat4f("View", view);
 
-            shader.Unbind();
+            basicShader.Unbind();
 
+
+            renderer.MonoscopicDraw(background, uiShader);
+
+            renderer.ClearDepthBuffer();
 
             //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
             //renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
-            renderer.MonoscopicDraw(doublePyramid, shader);
+            renderer.MonoscopicDraw(doublePyramid, basicShader);
 
 
             // ---------- Calibration lines ----------
 
+            renderer.ClearDepthBuffer();
             if (calibrating)
             {
                 renderer.MonoscopicDraw(line1, lineShader);

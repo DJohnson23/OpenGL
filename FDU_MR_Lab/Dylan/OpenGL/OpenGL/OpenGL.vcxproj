@@ -160,6 +160,7 @@
   <ItemGroup>
     <None Include="res\shaders\Basic.shader" />
     <None Include="res\shaders\Line.shader" />
+    <None Include="res\shaders\ui.shader" />
     <None Include="src\vendor\glm\detail\func_common.inl" />
     <None Include="src\vendor\glm\detail\func_common_simd.inl" />
     <None Include="src\vendor\glm\detail\func_exponential.inl" />
@@ -593,6 +594,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\textures\Apple.png" />
+    <Image Include="res\textures\fish.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
