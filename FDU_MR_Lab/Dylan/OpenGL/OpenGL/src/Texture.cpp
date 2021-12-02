@@ -38,3 +38,13 @@ void Texture::Unbind() const
 {
 	GLCall(glBindTexture(GL_TEXTURE_2D, 0));
 }
+
+void Texture::setData(cv::Mat& img)
+{
+	m_Width = img.cols;
+	m_Height = img.rows;
+
+	GLCall(glBindTexture(GL_TEXTURE_2D, m_RendererID));
+	GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, img.data));
+	GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+}

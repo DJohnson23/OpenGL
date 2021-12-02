@@ -1,6 +1,10 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -36,6 +40,9 @@ static const float HEIGHT_SPEED = 0.5f;
 static const float RAD_SPEED = 0.1f;
 static const float LENGTH_SPEED = 0.5f;
 
+static const int WEBCAM_FRAME_WIDTH = 640;
+static const int WEBCAM_FRAME_HEIGHT = 360;
+
 float deltaTime = 0;
 
 void updateValue(float& value, float speed)
@@ -50,6 +57,7 @@ void updateValue(float& value, float speed)
 
 int main(void) 
 {
+
     GLFWwindow* window;
 
     /* Initialize the library */
@@ -122,7 +130,6 @@ int main(void)
         GLCall(glEnable(GL_DEPTH_TEST));
         GLCall(glDepthFunc(GL_LESS));
         
-
         Camera cam;
         cam.camPos = glm::vec3(0, 0, 10);
         cam.camTarget = glm::vec3(0, 0, 0);
@@ -156,8 +163,8 @@ int main(void)
         basicShader.SetUniformMat4f("Projection", proj);
         basicShader.SetUniform3f("viewPos", cam.camPos);
 
-        Texture bgImgTex("res/textures/Apple.png");
-        bgImgTex.Bind();
+        Texture rightBGTex("res/textures/Apple.png");
+        rightBGTex.Bind();
         //basicShader.SetUniform1i("u_Texture", 0);
         
         basicShader.Unbind();
@@ -186,23 +193,6 @@ int main(void)
 
         uiShader.Unbind();
 
-        float bgAspect = (float)bgImgTex.GetWidth() / bgImgTex.GetHeight();
-        float imgUIHeight = SCREEN_HEIGHT;
-        float imgUIWidth = bgAspect * imgUIHeight;
-
-        if (bgAspect > (float)SCREEN_WIDTH / SCREEN_HEIGHT)
-        {
-            imgUIWidth = SCREEN_WIDTH;
-            imgUIHeight = (1 / bgAspect) * imgUIWidth;
-        }
-
-        float xMargin = (SCREEN_WIDTH - imgUIWidth) / 2;
-        float yMargin = (SCREEN_HEIGHT - imgUIHeight) / 2;
-        glm::vec2 imgMin = glm::vec2(xMargin, yMargin);
-        glm::vec2 imgMax = glm::vec2(SCREEN_WIDTH - xMargin, SCREEN_HEIGHT - yMargin);
-
-        Mesh background = Mesh::UIRectangle(imgMin, imgMax);
-
         Renderer renderer(window);
 
         bool calibrating = false;
@@ -215,9 +205,53 @@ int main(void)
 
         long lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
+        cv::VideoCapture rightEyeCapture(1);
+        rightEyeCapture.set(cv::CAP_PROP_FRAME_WIDTH, WEBCAM_FRAME_WIDTH);
+        rightEyeCapture.set(cv::CAP_PROP_FRAME_HEIGHT, WEBCAM_FRAME_HEIGHT);
+
+        float bgAspect = (float)rightBGTex.GetWidth() / rightBGTex.GetHeight();
+        float imgUIHeight = SCREEN_HEIGHT;
+        float imgUIWidth = bgAspect * imgUIHeight;
+
+        if (bgAspect > (float)SCREEN_WIDTH / SCREEN_HEIGHT)
+        {
+            imgUIWidth = SCREEN_WIDTH;
+            imgUIHeight = (1 / bgAspect) * imgUIWidth;
+        }
+
+        float xMargin = (SCREEN_WIDTH - imgUIWidth) / 2;
+        xMargin = 0;
+        float yMargin = (SCREEN_HEIGHT - imgUIHeight) / 2;
+        yMargin = 0;
+        glm::vec2 imgMin = glm::vec2(xMargin, yMargin);
+        glm::vec2 imgMax = glm::vec2(SCREEN_WIDTH - xMargin, SCREEN_HEIGHT - yMargin);
+
+        Mesh background = Mesh::UIRectangle(imgMin, imgMax);
+
+        cv::Mat rightEyeImg;
+
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
+
+            if (rightEyeCapture.isOpened())
+            {
+                bool grabbed = rightEyeCapture.grab();
+                bool retrieved = rightEyeCapture.retrieve(rightEyeImg);
+
+                if (grabbed && retrieved && !rightEyeImg.empty())
+                {
+                    cv::flip(rightEyeImg, rightEyeImg, 0);
+                    cv::cvtColor(rightEyeImg, rightEyeImg, cv::COLOR_BGR2RGB);
+
+                    rightBGTex.setData(rightEyeImg);
+                    rightBGTex.Bind();
+                    uiShader.Bind();
+                    uiShader.SetUniform1i("u_Texture", 0);
+                    uiShader.Unbind();
+                }
+            }
+
             /* Render here */
             renderer.Clear();
 

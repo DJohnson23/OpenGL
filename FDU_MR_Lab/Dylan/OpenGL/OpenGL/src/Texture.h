@@ -1,5 +1,7 @@
 #pragma once
 
+#include <opencv2/core/core.hpp>
+
 #include "Renderer.h"
 
 class Texture
@@ -19,5 +21,6 @@ public:
 
 	inline int GetWidth() const { return m_Width; }
 	inline int GetHeight() const { return m_Height; }
+	void setData(cv::Mat& img);
 
 };
