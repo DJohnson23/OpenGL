@@ -38,7 +38,7 @@ void main()
 {
 	//vec3 lightPos = vec3(1, 2, 3);
 	//vec3 lightDir = normalize(lightPos - FragPos);
-	vec3 lightDir = normalize(vec3(1, 2, 3));
+	vec3 lightDir = normalize(vec3(-1, 2, -3));
 	vec3 lightColor = vec3(1, 0.9, 0.8);
 	vec3 norm = normalize(normal);
 

@@ -6,9 +6,16 @@
 #include "Renderer.h"
 
 Shader::Shader(const std::string& filepath)
-	: m_FilePath(filepath), m_RendererID(0)
+	: m_FilePath(filepath)
 {
     ShaderProgramSource source = ParseShader(filepath);
+    m_RendererID = CreateShader(source.VertexSource, source.FragmentSource);
+}
+
+Shader::Shader(Shader& shader)
+    : m_FilePath(shader.m_FilePath)
+{
+    ShaderProgramSource source = ParseShader(shader.m_FilePath);
     m_RendererID = CreateShader(source.VertexSource, source.FragmentSource);
 }
 
@@ -102,12 +109,12 @@ void Shader::SetUniform4f(const std::string& name, float v0, float v1, float v2,
     GLCall(glUniform4f(GetUniformLocation(name), v0, v1, v2, v3));
 }
 
-void Shader::SetUniformMat4f(const std::string& name, glm::mat4& matrix)
+void Shader::SetUniformMat4f(const std::string& name, glm::mat4 matrix)
 {
     GLCall(glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, &matrix[0][0]));
 }
 
-void Shader::SetUniform3f(const std::string& name, glm::vec3& vector)
+void Shader::SetUniform3f(const std::string& name, glm::vec3 vector)
 {
     GLCall(glUniform3f(GetUniformLocation(name), vector.x, vector.y, vector.z));
 }

@@ -9,6 +9,7 @@
 #include "IndexBuffer.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Camera.h"
 
 #define ASSERT(x) if (!(x)) __debugbreak();
 #define GLCall(x) GLClearError();\
@@ -17,13 +18,6 @@
 
 void GLClearError();
 bool GLLogCall(const char* function, const char* file, int line);
-
-struct Camera 
-{
-    glm::vec3 camPos;
-    glm::vec3 camTarget;
-    glm::vec3 upVector;
-};
 
 class Renderer
 {
@@ -35,6 +29,6 @@ public:
     Renderer(GLFWwindow* win);
     void Clear() const;
     void ClearDepthBuffer() const;
-    void StereoscopicDraw(Mesh& m, Shader& shader, const Camera cam, float ipd) const;
+    void StereoscopicDraw(Mesh& m, Shader& shader, const Camera& leftCam, const Camera& rightCam) const;
     void MonoscopicDraw(Mesh& m, const Shader& shader) const;
 };

@@ -21,6 +21,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Input.h"
+#include "Camera.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -42,6 +43,9 @@ static const float LENGTH_SPEED = 0.5f;
 
 static const int WEBCAM_FRAME_WIDTH = 640;
 static const int WEBCAM_FRAME_HEIGHT = 360;
+
+static const int RIGHT_EYE_CAM = 1;
+static const int LEFT_EYE_CAM = 2;
 
 float deltaTime = 0;
 
@@ -67,21 +71,36 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
     int monitorCount;
     GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
     std::cout << "Monitor Count:" << monitorCount << std::endl;
 
-    GLFWmonitor* rightMonitor = nullptr;
+    int leftPosition = 0, winWidth = 0, winHeight = 0;
 
-    if (monitorCount <= RIGHT_EYE_MONITOR)
-        std::cout << "No right eye monitor" << std::endl;
-    else
-        rightMonitor = monitors[RIGHT_EYE_MONITOR];
+    for (int i = 0; i < monitorCount; i++)
+    {
+        GLFWmonitor* curMon = monitors[i];
+
+        int xPos, yPos;
+        glfwGetMonitorPos(curMon, &xPos, &yPos);
+
+        const GLFWvidmode* mode = glfwGetVideoMode(curMon);
+        winWidth += mode->width;
+
+        if (mode->height > winHeight)
+            winHeight = mode->height;
+
+        if (xPos < leftPosition)
+            leftPosition = xPos;
+    }
 
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Right Eye", rightMonitor, NULL);
+    window = glfwCreateWindow(winWidth, winHeight, "Window", NULL, NULL);
+    glfwSetWindowPos(window, leftPosition, 0);
+
     if (!window)
     {
         glfwTerminate();
@@ -101,9 +120,6 @@ int main(void)
     Input::Initialize(window);
 
     {
-        Mesh cubeMesh = Mesh::Cube();
-        Mesh planeMesh = Mesh::Plane();
-        //Mesh dollMesh = Mesh::LoadMesh("res/meshes/Doll.obj");
         float radius = 0.1f, height = 3.0f, squareLength = 2.0f;
         Mesh doublePyramid = Mesh::DoublePyramid(squareLength, height, radius);
 
@@ -123,25 +139,34 @@ int main(void)
         Mesh circle2 = Mesh::Circle(screenCenter, circleSpacing * 2, lineThickness);
         Mesh circle3 = Mesh::Circle(screenCenter, circleSpacing * 3, lineThickness);
         Mesh circle4 = Mesh::Circle(screenCenter, circleSpacing * 4, lineThickness);
-        
+
 
         GLCall(glEnable(GL_BLEND));
         GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
         GLCall(glEnable(GL_DEPTH_TEST));
         GLCall(glDepthFunc(GL_LESS));
-        
-        Camera cam;
-        cam.camPos = glm::vec3(0, 0, 10);
-        cam.camTarget = glm::vec3(0, 0, 0);
-        cam.upVector = glm::vec3(0, 1, 0);
 
-        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 200.0f);
-        //glm::mat4 proj = glm::perspective<float>(60.0f, static_cast<float>(SCREEN_WIDTH) / SCREEN_HEIGHT, 0.1f, 150.0f);
-        glm::mat4 view = glm::lookAt(
-            cam.camPos, // Camera World Space position
-            cam.camTarget, // looks at origin
-            cam.upVector  // Up Vector
-        );
+        float ipd = 0.64f;
+
+        Camera vCamLeft;
+        vCamLeft.position.z = -10;
+        vCamLeft.position.x = -ipd / 2;
+
+        Camera uiCam;
+        uiCam.orthographic = true;
+
+        glm::mat4 camMat = uiCam.viewMat();
+
+        for (int r = 0; r < 4; r++)
+        {
+            for (int c = 0; c < 4; c++)
+            {
+                std::cout << camMat[r][c] << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << std::endl;
         
         glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
         float rotationAngle = 0.0f;
@@ -159,9 +184,9 @@ int main(void)
         basicShader.Bind();
         basicShader.SetUniform4f("u_Color", 0.0f, 1.0f, 0.0f, 1.0f);
         basicShader.SetUniformMat4f("Model", model);
-        basicShader.SetUniformMat4f("View", view);
-        basicShader.SetUniformMat4f("Projection", proj);
-        basicShader.SetUniform3f("viewPos", cam.camPos);
+        basicShader.SetUniformMat4f("View", vCamLeft.viewMat());
+        basicShader.SetUniformMat4f("Projection", vCamLeft.projMat());
+        basicShader.SetUniform3f("viewPos", vCamLeft.position);
 
         Texture rightBGTex("res/textures/Apple.png");
         rightBGTex.Bind();
@@ -198,14 +223,12 @@ int main(void)
         bool calibrating = false;
         bool rotating = false;
 
-        float ipd = 0.64f;
-
         float r = 0.0f;
         float increment = 0.05f;
 
         long lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-        cv::VideoCapture rightEyeCapture(1);
+        cv::VideoCapture rightEyeCapture(RIGHT_EYE_CAM);
         rightEyeCapture.set(cv::CAP_PROP_FRAME_WIDTH, WEBCAM_FRAME_WIDTH);
         rightEyeCapture.set(cv::CAP_PROP_FRAME_HEIGHT, WEBCAM_FRAME_HEIGHT);
 
@@ -272,7 +295,7 @@ int main(void)
 
             if (Input::GetKeyDown(GLFW_KEY_ESCAPE))
             {
-                exit(0);
+                glfwSetWindowShouldClose(window, 1);
             }
 
             if (rotating)
@@ -352,14 +375,14 @@ int main(void)
 
             if (Input::GetKey(GLFW_KEY_UP))
             {
-                updateValue(cam.camPos.z, CAM_SPEED);
+                updateValue(vCamLeft.position.z, CAM_SPEED);
+
+                if (vCamLeft.position.z > 0)
+                    vCamLeft.position.z = 0;
             }
             else if (Input::GetKey(GLFW_KEY_DOWN))
             {
-                updateValue(cam.camPos.z, -CAM_SPEED);
-
-                if (cam.camPos.z < 0)
-                    cam.camPos.z = 0;
+                updateValue(vCamLeft.position.z, -CAM_SPEED);
             }
 
             //rotationAngle = 0.785f;
@@ -369,25 +392,20 @@ int main(void)
             rotMat = glm::rotate(glm::mat4(1.0f), rotationAngle, rotationAxis);
             model = tranMat * rotMat * scaleMat;
 
-            view = glm::lookAt(
-                cam.camPos, // Camera World Space position
-                cam.camTarget, // looks at origin
-                cam.upVector  // Up Vector
-            );
-
             basicShader.SetUniformMat4f("Model", model);
-            basicShader.SetUniformMat4f("View", view);
+            basicShader.SetUniformMat4f("View", vCamLeft.viewMat());
 
             basicShader.Unbind();
 
 
-            renderer.MonoscopicDraw(background, uiShader);
+            renderer.StereoscopicDraw(background, uiShader, uiCam, uiCam);
 
             renderer.ClearDepthBuffer();
 
             //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
             //renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
-            renderer.MonoscopicDraw(doublePyramid, basicShader);
+            //renderer.MonoscopicDraw(doublePyramid, basicShader);
+            renderer.StereoscopicDraw(doublePyramid, basicShader, vCamLeft, vCamLeft);
 
 
             // ---------- Calibration lines ----------
@@ -395,13 +413,13 @@ int main(void)
             renderer.ClearDepthBuffer();
             if (calibrating)
             {
-                renderer.MonoscopicDraw(line1, lineShader);
-                renderer.MonoscopicDraw(line2, lineShader);
-
-                renderer.MonoscopicDraw(circle1, lineShader);
-                renderer.MonoscopicDraw(circle2, lineShader);
-                renderer.MonoscopicDraw(circle3, lineShader);
-                renderer.MonoscopicDraw(circle4, lineShader);
+                renderer.StereoscopicDraw(line1, lineShader, uiCam, uiCam);
+                renderer.StereoscopicDraw(line2, lineShader, uiCam, uiCam);
+                         
+                renderer.StereoscopicDraw(circle1, lineShader, uiCam, uiCam);
+                renderer.StereoscopicDraw(circle2, lineShader, uiCam, uiCam);
+                renderer.StereoscopicDraw(circle3, lineShader, uiCam, uiCam);
+                renderer.StereoscopicDraw(circle4, lineShader, uiCam, uiCam);
             }
 
             // ---------- Calibration lines ----------
