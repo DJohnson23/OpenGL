@@ -10,6 +10,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
+#include "Eyes.h"
 
 #define ASSERT(x) if (!(x)) __debugbreak();
 #define GLCall(x) GLClearError();\
@@ -30,5 +31,6 @@ public:
     void Clear() const;
     void ClearDepthBuffer() const;
     void StereoscopicDraw(Mesh& m, Shader& shader, const Camera& leftCam, const Camera& rightCam) const;
+    void StereoscopicDraw(Mesh& m, Shader& shader, const Eyes& eyes) const;
     void MonoscopicDraw(Mesh& m, const Shader& shader) const;
 };

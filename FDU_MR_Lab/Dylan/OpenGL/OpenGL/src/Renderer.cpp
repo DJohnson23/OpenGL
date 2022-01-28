@@ -31,10 +31,46 @@ void Renderer::StereoscopicDraw(Mesh& m, Shader& shader, const Camera& leftCam, 
     shader.Bind();
 
     shader.SetUniformMat4f("View", leftCam.viewMat());
+    shader.SetUniform3f("viewPos", leftCam.position);
     GLCall(glViewport(0, 0, width / 2.0f, height));
     Draw(m, shader);
 
     shader.SetUniformMat4f("View", rightCam.viewMat());
+    shader.SetUniform3f("viewPos", rightCam.position);
+    GLCall(glViewport(width / 2.0f, 0, width / 2.0f, height));
+    Draw(m, shader);
+
+    shader.Unbind();
+}
+
+void printMat(glm::mat4& m) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            std::cout << m[i][j] << " ";
+        }
+
+        std::cout << std::endl;
+    }
+}
+
+void Renderer::StereoscopicDraw(Mesh& m, Shader& shader, const Eyes& eyes) const
+{
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    shader.Bind();
+
+    glm::mat4* mats = eyes.viewMats();
+
+    shader.SetUniformMat4f("Projection", eyes.projMat());
+
+    shader.SetUniformMat4f("View", mats[0]);
+    shader.SetUniform3f("viewPos", eyes.getLeftPos());
+    GLCall(glViewport(0, 0, width / 2.0f, height));
+    Draw(m, shader);
+
+    shader.SetUniformMat4f("View", mats[1]);
+    shader.SetUniform3f("viewPos", eyes.getRightPos());
     GLCall(glViewport(width / 2.0f, 0, width / 2.0f, height));
     Draw(m, shader);
 

@@ -22,6 +22,7 @@
 #include "Mesh.h"
 #include "Input.h"
 #include "Camera.h"
+#include "Eyes.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -36,6 +37,7 @@ static const float PI2 = PI * 2;
 
 static const float ROT_SPEED = PI / 4.0f;
 static const float CAM_SPEED = 1.0f;
+static const float IPD_SPEED = 0.5f;
 
 static const float HEIGHT_SPEED = 0.5f;
 static const float RAD_SPEED = 0.1f;
@@ -44,7 +46,7 @@ static const float LENGTH_SPEED = 0.5f;
 static const int WEBCAM_FRAME_WIDTH = 640;
 static const int WEBCAM_FRAME_HEIGHT = 360;
 
-static const int RIGHT_EYE_CAM = 1;
+static const int RIGHT_EYE_CAM = 0;
 static const int LEFT_EYE_CAM = 2;
 
 float deltaTime = 0;
@@ -146,11 +148,7 @@ int main(void)
         GLCall(glEnable(GL_DEPTH_TEST));
         GLCall(glDepthFunc(GL_LESS));
 
-        float ipd = 0.64f;
-
-        Camera vCamLeft;
-        vCamLeft.position.z = -10;
-        vCamLeft.position.x = -ipd / 2;
+        Eyes eyes;
 
         Camera uiCam;
         uiCam.orthographic = true;
@@ -184,15 +182,8 @@ int main(void)
         basicShader.Bind();
         basicShader.SetUniform4f("u_Color", 0.0f, 1.0f, 0.0f, 1.0f);
         basicShader.SetUniformMat4f("Model", model);
-        basicShader.SetUniformMat4f("View", vCamLeft.viewMat());
-        basicShader.SetUniformMat4f("Projection", vCamLeft.projMat());
-        basicShader.SetUniform3f("viewPos", vCamLeft.position);
 
         Texture rightBGTex("res/textures/Apple.png");
-        rightBGTex.Bind();
-        //basicShader.SetUniform1i("u_Texture", 0);
-        
-        basicShader.Unbind();
 
         glm::mat4 orthoModel = glm::mat4(1.0f);
         glm::mat4 orthoView = glm::mat4(1.0f);
@@ -232,24 +223,16 @@ int main(void)
         rightEyeCapture.set(cv::CAP_PROP_FRAME_WIDTH, WEBCAM_FRAME_WIDTH);
         rightEyeCapture.set(cv::CAP_PROP_FRAME_HEIGHT, WEBCAM_FRAME_HEIGHT);
 
-        float bgAspect = (float)rightBGTex.GetWidth() / rightBGTex.GetHeight();
-        float imgUIHeight = SCREEN_HEIGHT;
-        float imgUIWidth = bgAspect * imgUIHeight;
+        glm::mat4 bgProj = glm::ortho(0.0f, (float)winWidth, 0.0f, (float)winHeight, -1.0f, 1.0f);
 
-        if (bgAspect > (float)SCREEN_WIDTH / SCREEN_HEIGHT)
-        {
-            imgUIWidth = SCREEN_WIDTH;
-            imgUIHeight = (1 / bgAspect) * imgUIWidth;
-        }
-
-        float xMargin = (SCREEN_WIDTH - imgUIWidth) / 2;
-        xMargin = 0;
-        float yMargin = (SCREEN_HEIGHT - imgUIHeight) / 2;
-        yMargin = 0;
-        glm::vec2 imgMin = glm::vec2(xMargin, yMargin);
-        glm::vec2 imgMax = glm::vec2(SCREEN_WIDTH - xMargin, SCREEN_HEIGHT - yMargin);
-
-        Mesh background = Mesh::UIRectangle(imgMin, imgMax);
+        Mesh bgRight = Mesh::UIRectangle(glm::vec2(SCREEN_WIDTH, 0), glm::vec2(winWidth, winHeight));
+        Shader bgShader(uiShader);
+        bgShader.Bind();
+        bgShader.SetUniform4f("u_Color", 1.0f, 1.0f, 1.0f, 1.0f);
+        bgShader.SetUniformMat4f("Model", orthoModel);
+        bgShader.SetUniformMat4f("View", orthoView);
+        bgShader.SetUniformMat4f("Projection", bgProj);
+        bgShader.Unbind();
 
         cv::Mat rightEyeImg;
 
@@ -269,9 +252,9 @@ int main(void)
 
                     rightBGTex.setData(rightEyeImg);
                     rightBGTex.Bind();
-                    uiShader.Bind();
-                    uiShader.SetUniform1i("u_Texture", 0);
-                    uiShader.Unbind();
+                    bgShader.Bind();
+                    bgShader.SetUniform1i("u_Texture", 0);
+                    bgShader.Unbind();
                 }
             }
 
@@ -375,14 +358,26 @@ int main(void)
 
             if (Input::GetKey(GLFW_KEY_UP))
             {
-                updateValue(vCamLeft.position.z, CAM_SPEED);
+                updateValue(eyes.center.z, -CAM_SPEED);
 
-                if (vCamLeft.position.z > 0)
-                    vCamLeft.position.z = 0;
+                if (eyes.center.z < 0)
+                    eyes.center.z = 0;
             }
             else if (Input::GetKey(GLFW_KEY_DOWN))
             {
-                updateValue(vCamLeft.position.z, -CAM_SPEED);
+                updateValue(eyes.center.z, CAM_SPEED);
+            }
+
+            if (Input::GetKey(GLFW_KEY_I))
+            {
+                updateValue(eyes.ipd, IPD_SPEED);
+            }
+            else if (Input::GetKey(GLFW_KEY_U))
+            {
+                updateValue(eyes.ipd, -IPD_SPEED);
+
+                if (eyes.ipd < 0.1f)
+                    eyes.ipd = 0.1f;
             }
 
             //rotationAngle = 0.785f;
@@ -393,19 +388,16 @@ int main(void)
             model = tranMat * rotMat * scaleMat;
 
             basicShader.SetUniformMat4f("Model", model);
-            basicShader.SetUniformMat4f("View", vCamLeft.viewMat());
 
             basicShader.Unbind();
 
 
-            renderer.StereoscopicDraw(background, uiShader, uiCam, uiCam);
+            //renderer.StereoscopicDraw(background, uiShader, uiCam, uiCam);
+            renderer.MonoscopicDraw(bgRight, bgShader);
 
             renderer.ClearDepthBuffer();
 
-            //renderer.StereoscopicDraw(cubeMesh, shader, cam, ipd);
-            //renderer.StereoscopicDraw(octahedron, shader, cam, ipd);
-            //renderer.MonoscopicDraw(doublePyramid, basicShader);
-            renderer.StereoscopicDraw(doublePyramid, basicShader, vCamLeft, vCamLeft);
+            renderer.StereoscopicDraw(doublePyramid, basicShader, eyes);
 
 
             // ---------- Calibration lines ----------
